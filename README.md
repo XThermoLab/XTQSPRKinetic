@@ -22,7 +22,7 @@ This GitHub repository distributes the **modular implementation corresponding to
 ## Algorithm overview
 
 <p align="center">
-  <img src="docs/images/fig1_algorithm.jpg" alt="XTQSPRKinetic algorithm overview" width="900">
+  <img src="docs/images/fig1_algorithm.png" alt="XTQSPRKinetic algorithm overview" width="900">
 </p>
 
 <p align="center"><em>Figure 1. High-level XTQSPRKinetic workflow/algorithm overview.</em></p>
