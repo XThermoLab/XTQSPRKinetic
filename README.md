@@ -238,7 +238,7 @@ Important: this legacy route may run XTQSPRKinetic successfully, but `pip check`
 
 ### Generating all requirements profiles
 
-The revised generator can produce both Mordred routes:
+The generator can produce both Mordred routes:
 
 ```bash
 python gen_xtqspr_requirements.py ./src ./main \
