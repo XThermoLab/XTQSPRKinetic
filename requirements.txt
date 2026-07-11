@@ -1,0 +1,12 @@
+Boruta
+drfp
+joblib
+matplotlib
+mordred
+numpy
+pandas
+PyYAML
+rdkit
+scikit-learn
+shap
+xgboost

@@ -1,0 +1,11 @@
+{
+  "created": "2026-07-08T08:03:29.152615Z",
+  "agg": "sum",
+  "nan_policy": "mean",
+  "parallel_enable": true,
+  "parallel_n_jobs": -1,
+  "parallel_backend": "loky",
+  "rows": 1215,
+  "cols": 1613,
+  "mordred_xtqspr_explicit_h_patch_enable": true
+}

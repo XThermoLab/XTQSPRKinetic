@@ -1,0 +1,26 @@
+{
+  "label": "Run pipeline",
+  "pipeline_version": "2.7.0",
+  "status": "success",
+  "started_utc": "2026-07-08T08:02:27.649229Z",
+  "ended_utc": "2026-07-08T08:06:14.846164Z",
+  "elapsed_seconds": 227.19693799992092,
+  "elapsed_minutes": 3.786615633332015,
+  "elapsed_human": "3m 47.20s",
+  "input_csv": "D:\\XTQSPRKinetic_Python\\XTQSPRK\\XTQSPRKinetic\\data\\../data/n-hexan_reaction.csv",
+  "output_dir": "D:\\XTQSPRKinetic_Python\\XTQSPRK\\XTQSPRKinetic\\output\\../output/Table4/RowAll_baseline_LDA_k07_hard_family_stats_Ea",
+  "target_cols": [
+    "lnA",
+    "n",
+    "Ea"
+  ],
+  "topic_method": "lda",
+  "n_topics": 7,
+  "mordred_parallel_enable": true,
+  "mordred_parallel_n_jobs": -1,
+  "boruta_parallel_enable": true,
+  "boruta_parallel_n_jobs": -1,
+  "shap_sample_size": 0,
+  "descriptive_figures_enable": false,
+  "figure_label_index_base": 1
+}

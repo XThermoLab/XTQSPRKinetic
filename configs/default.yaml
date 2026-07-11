@@ -1,0 +1,483 @@
+# XTQSPRKinetic v2.7.0 — Complete commented configuration (DEFAULT profile)
+# Based on the DEFAULT_CONFIG schema in the src/config.py, with profile-specific overrides.
+# All supported options are included. Edit values as needed for your dataset and compute budget.
+# Profile intent: stable baseline/reference settings close to script defaults with fully documented options.
+
+
+# ============================== PIPELINE I/O ==============================
+pipeline_version: "2.7.0"                                               # str; pipeline semantic version
+pipeline_include_metrics: false                                         # bool; embed summary metrics in pipeline.pkl (size ↑)
+pipeline_compress: "auto"                                               # {'none' | 'auto' | ['zlib',level] | ['lz4',level] | ['lzma',level] | ['zstd',level]}
+                                                                        #  auto: prefer lz4:3 (if installed) else lzma:3 else zlib:3
+                                                                        #  levels: int (zlib:0–9, lz4:0–12*, lzma:0–9, zstd:1–22) *python-lz4 uses 0–12-ish
+pipeline_dump_sidecar_meta: true                                        # bool; write pipeline.pkl.meta.json (provenance)
+
+# ------------------ IO & Reproducibility ---------------------------------
+input_csv: "../data/RS_1.csv"                                           # str; must contain reaction_smiles plus target_cols
+output_dir: "../output/RS_1_default"                                    # str; directory for all artifacts
+random_state: 42                                                        # int; 0–2**31-1; fix for reproducible DRFP/LDA/FCM/XGB
+
+# ============================== TARGETS ===================================
+# General continuous reaction-property targets. The default Arrhenius case study
+# remains lnA, n, and Ea, but any numeric reaction-level target columns can be used.
+target_cols: ["lnA", "n", "Ea"]                                         # list[str]; supervised continuous target columns to predict
+
+# ============================ DESCRIPTORS =================================
+# Mordred NA policy: avoid row loss; Boruta later removes non-informative columns.
+desc_nan_policy: "mean"                                                 # {'mean','median','zero','drop'}; prefer 'mean'/'median'
+
+# Feature assembly: Mordred (+optional DRFP) + flags, then impute on merged table
+include_drfp_in_features: true                                          # bool; include DRFP bits in Boruta pool
+apply_zero_variance_filter: false                                       # bool; drop zero-variance cols before Boruta (safe, fast)
+feature_fillna: "mean"                                                  # {'mean','zero'}; impute final merged X
+
+# DRFP / LDA diagnostics
+drfp_drop_zero_rows: false                                              # drop reactions with all-zero DRFP rows
+topic_similarity_enable: false                                          # compute topic-topic similarity & heatmaps for LDA
+topic_similarity_topn: 20                                               # top-N words/bits per topic for Jaccard
+# LDA topic coherence (optional; uses Gensim if available)
+lda_coherence_enable: false                                             # bool; compute c_v / c_npmi / u_mass over DRFP-bit tokens
+lda_coherence_metric: "c_v"                                             # {'c_v','c_npmi','u_mass'}
+lda_coherence_topn: 20                                                  # top-N tokens per topic
+lda_coherence_window_size: 110                                          # context window for c_v / c_npmi
+lda_coherence_min_count: 2                                              # drop tokens with <min_count docs
+lda_coherence_max_df: 0.95                                              # drop tokens in >max_df fraction of docs
+lda_coherence_processes: 1                                              # parallel workers for Gensim (>=1)
+lda_coherence_token_source: "drfp_bits"                                 # {'drfp_bits','drfp_ngrams','brics_smarts'}
+brics_to_smarts: false                                                  # if True: convert BRICS fragments to SMARTS (otherwise keep fragment SMILES)
+brics_min_fragment_size: 1                                              # minimum BRICS fragment size (1 = keep all), try small integers (1–3)
+
+# Mordred aggregation: reactants (R) + products (P)
+# 'sum'   : ORIGINAL behavior, R_sum + P_sum per descriptor (stoichiometry-agnostic but robust)
+# 'concat': keep R_* and P_* separate (doubling columns; more expressive, more collinearity risk)
+# 'delta' : P_sum - R_sum (reaction change proxy)
+mordred_agg: "sum"                                                      # {'sum','concat','delta'};
+
+# Mordred 3D toggle (via env)
+mordred_3d_enable: false                                                # use 3D descriptors (conformer embedding)
+
+# XTQSPRKinetic explicit-Hydrogen-aware modified Mordred/MordredCommunity mode.
+mordred_xtqspr_explicit_h_patch_enable: true                            # bool; enable runtime explicit-H Mordred patch; changes descriptor values/cache key
+# If this flag is changed, use a fresh descriptor cache or set descriptor_cache: false for the first run.
+
+# Mordred descriptor parallelization. Disabled by default for backward-compatible reproducibility;
+# enable in YAML for large datasets after confirming cache/outputs in your environment.
+mordred_parallel_enable: false                                          # bool; compute reaction-level Mordred rows with joblib Parallel
+mordred_parallel_n_jobs: -1                                             # int; -1 uses all available CPUs when enabled
+mordred_parallel_backend: "loky"                                        # {'loky','multiprocessing','threading'}; loky = process backend
+mordred_parallel_batch_size: "auto"                                     # {'auto' or int}; joblib scheduling batch size
+
+# Special-case chemistry patch: keep H· + H· -> H2 from becoming all-zero DRFP/features.
+hydrogen_radical_special_case_enable: true                              # bool; append H/radical/bond descriptors and repair zero DRFP for [H].[H]>>[H][H]
+
+# ============================== SCALING ===================================
+use_robust_scaler: true                                                 # bool; RobustScaler mitigates outliers (tabular chem data)
+
+# ============================== XGBOOST ===================================
+# Balanced defaults; tune per “fast/balanced/accuracy” profiles as needed.
+xgb_params:
+    objective: "reg:squarederror"                                       # Loss for regression {'reg:squaredlogerror', 'reg:pseudohubererror', 'reg:tweedie'}
+    booster: "gbtree"                                                   # Booster type {'gbtree' (trees), 'dart' (trees with dropout), 'gblinear' (linear)}
+    n_estimators: 100                                                   # Number of boosting rounds (trees) 50–5000; ↑ with ↓ learning_rate; no early stopping wired
+    learning_rate: 0.3                                                  # Step size shrinkage per boosting iteration (alias: eta). Range: (0, 1]. Typical: 0.01–0.3; smaller → more trees
+    max_depth: 6                                                        # Maximum tree depth. Range: [0, ∞). 0 means “no limit” in some contexts but not recommended. 3–10 typical; control model capacity
+    min_child_weight: 1.0                                               # Range: [0, ∞). Larger values -> more conservative. ≥0; ↑ → more conservative
+    gamma: 0.0                                                          # Range: [0, ∞), ≥0 makes splitting harder; split gain threshold (regularization)
+    grow_policy: "depthwise"                                            # Tree growth policy {'depthwise','lossguide'} (leaf-wise; typically used with max_leaves)
+    max_bin: 256                                                        # Number of histogram bins for hist/gpu_hist. Range: [2, 65536]. 64–1024 typical for hist. Higher improves fidelity but costs memory/compute
+    subsample: 1.0                                                      # Row subsampling per tree. Range:(0,1]; row subsampling; 0.5–0.9 stabilizes
+    colsample_bytree: 1.0                                               # Feature subsampling per tree. Range:(0,1]; feature subsampling; 0.5–0.9 common
+    colsample_bylevel: 1.0                                              # Feature subsampling per tree level. Range:(0, 1] keep 1.0 unless under heavy regularization
+    colsample_bynode: 1.0                                               # Feature subsampling per split. Range: (0, 1] keep 1.0 unless under heavy regularization
+    sampling_method: "uniform"                                          # Histogram sampling method (hist/gpu_hist). {'uniform','gradient_based'}
+    num_parallel_tree: 1                                                # Number of trees built in parallel per iteration (RF-like). Range: [1, ∞). RF-like if >1 (rare in this pipeline)
+    reg_lambda: 1.0                                                     # L2 regularization term (alias: lambda). ≥0; Range: [0, ∞). Typical: 0–10.
+    reg_alpha: 0.0                                                      # L1 regularization term (alias: alpha). ≥0; Range: [0, ∞). Typical: 0–1+.
+    tree_method: "hist"                                                 # Algorithm chooser {'hist' (fast CPU), 'gpu_hist' (GPU), 'approx', 'exact', 'auto' (resolves based on data/hardware)}
+    predictor: "cpu_predictor"                                          # Prediction path {''cpu_predictor', 'gpu_predictor', 'auto' (selects based on tree_method/hardware)}
+    n_jobs: -1                                                          # Threads for training. None means “use all threads” in sklearn wrapper semantics. Typical explicit values: -1 (all cores) or a positive int.
+    verbosity: 1                                                        # Logging level: 0=silent, 1=warning, 2=info, 3=debug.
+    importance_type: "gain"                                             # Feature importance type {'gain','weight','cover','total_gain','total_cover'}
+    random_state: 42                                                    # Sklearn random seed; if None, core uses seed=0 by default. int or None; keep fixed for reproducibility
+
+# ========================= ERROR COLUMNS ==================================
+relerr_mode: "smape"                                                    # {'abs_rel','smape','both'}; sMAPE robust near zeros
+relerr_epsilon: 1e-08                                                   # >0; denominator floor for ARE/sMAPE; increase if you have many zeros
+
+# ===================== HYPERPARAMETER RECOMMENDER ========================
+# Scientific intent:
+#   This model’s family structure (reaction clustering / gating) is learned from the reaction network
+#   and becomes more informative as the network grows. Therefore, splitting the training network and
+#   reporting cross-validation scores as "final performance" is not methodologically aligned with the
+#   final objective (a single model trained on the full clustered network).
+#
+#   In this script, cross-validation is used ONLY for hyperparameter selection (model selection),
+#   not for definitive performance estimation. Final generalization should be assessed on an
+#   external reaction network using the separate evaluation program.
+#
+# Recommended workflow:
+#   1) Hyperparameter recommendation run:
+#        - Set hp_recommender_run=True (optionally hp_recommender_exit_after=True).
+#        - The script performs CV-based tuning within families or pooled size regimes and writes a JSON
+#          of recommended XGBoost hyperparameters (per family / per target, as configured).
+#   2) Final training run:
+#        - Set hp_use_recommended_params=True and hp_recommended_json_path=<path-to-JSON>.
+#        - The script trains ONCE on the full clustered network using the recommended hyperparameters
+#          and saves the final pipeline (pipeline.pkl) for external evaluation.
+
+hp_target_cols: ["lnA", "n", "Ea"]                                      # list[str]|null; legacy HP target order; target_cols is canonical target list
+
+# -------------------- Recommender run controls --------------------
+hp_recommender_run: false                                               # bool; if True: run the offline CV recommender and write JSON/CSV.
+hp_recommender_exit_after: true                                         # bool; if True and hp_recommender_run=True: stop after writing JSON/CSV (recommended 2-stage workflow).
+hp_recommender_mode: "size_regime"                                      # {'per_family','size_regime'}; size_regime is usually more stable for many small families.
+
+hp_recommender_out_json: "xgb_hyperparams_by_family.json"               # str; JSON written under output_dir.
+hp_recommender_report_csv: "xgb_hyperparams_report.csv"                 # str; CSV summary written under output_dir.
+
+# -------------------- CV stability knobs (selection only) --------------------
+hp_recommender_n_folds: 5                                               # int; folds used for tuning blocks (family/regime). Typical 3–10; 5 balances stability vs compute.
+hp_recommender_n_jobs: -1                                               # int; GridSearchCV parallelism (-1 = all cores).
+hp_recommender_min_fold_size: 10                                        # int; minimum samples per validation fold to reduce noisy tuning; blocks that can't support this will reduce folds or skip.
+hp_recommender_min_family_size: 15                                      # int; below this, tuning is skipped and GLOBAL params are used (prevents high-variance “over-tuning” on tiny families).
+hp_recommender_use_robust_scaler: true                                  # bool; scaler used inside the tuning pipeline (RobustScaler if True else StandardScaler). Keep consistent with training if possible.
+
+# -------------------- Tuning objective (what “best” means) --------------------
+hp_recommender_scoring: "neg_rmse"                                      # str; {'rmse','neg_rmse','mae','neg_mae','r2'}.
+                                                                        # Note: GridSearchCV *maximizes* the score; RMSE/MAE are implemented as negative scorers so lower error => higher score.
+
+# -------------------- Search space (keep it safe + not too expensive) --------------------
+# Definition of the hyperparameter search space for XGBoost.
+# Keys must be valid XGBoost parameter names.
+# IMPORTANT: Include your known-good baseline region (e.g., learning_rate≈0.2–0.3) AND enough trees to support smaller learning rates.
+# Keep this grid compact by default; expand only if you have compute budget.
+hp_recommender_param_grid:
+    # Maximum depth of a tree. Increasing this value will make the model more complex and more likely to overfit.
+    # Range: 3 (Simple) to 10 (Complex).
+    max_depth: [3, 5, 7]
+
+    # Step size shrinkage used to prevent overfitting. After each boosting step, we get the weights of new features.
+    # Range: 0.01 (Slow/Learning) to 0.3 (Fast).
+    # Recommendation: Lower values (0.01 - 0.1) generally yield better performance but require more 'n_estimators'.
+    learning_rate: [0.1, 0.2, 0.3]
+
+    # Number of boosting rounds (trees).
+    # Range: 50 to 1000+.
+    # Recommendation: If 'learning_rate' is low (e.g., 0.01), increase this (e.g., 500-1000).
+    # If 'learning_rate' is high (e.g., 0.1), keep this moderate (e.g., 100-200).
+    n_estimators: [100, 300, 800]
+
+    # --- Optional Parameters (Uncomment to include in search) ---
+    # 'subsample': [0.8, 1.0],                    # [float 0.0-1.0] Fraction of samples to be used for fitting the individual base learners.
+    # 'colsample_bytree': [0.8, 1.0],             # [float 0.0-1.0] Fraction of features to be used for fitting the individual base learners.
+    # 'reg_alpha': [0, 0.01, 0.1],                # [float] L1 regularization term on weights. Increasing makes model more conservative.
+    # 'reg_lambda': [1, 2.0, 5.0],                # [float] L2 regularization term on weights.
+    # 'min_child_weight': [1, 5],
+
+# Size regimes (only used when hp_recommender_mode='size_regime').
+# Example: [0, 25, 50, 100, 200, 10**9] => bins: 0-24, 25-49, 50-99, 100-199, 200+
+hp_recommender_size_bins: [0, 25, 50, 100, 200, 1000000000]
+
+# -------------------- Consumption (apply JSON during final training) --------------------
+hp_use_recommended_params: false                                        # bool; if True: load recommender JSON and apply overrides during the final full-network fit.
+hp_recommended_json_path: null                                          # str|None; path to JSON. If None and recommender ran this run, use the just-written JSON.
+
+# Target-selective application (requires the revised consumption block you installed)
+hp_use_recommended_targets: null                                        # list[str]|str|None; if None => apply to ALL targets found in JSON. Example: ["Ea"] to apply only Ea.
+hp_force_baseline_targets: []                                           # list[str]|str; targets that must always use baseline xgb_params (even if JSON contains overrides). Example: ["lnA","n"].
+
+# Safety knob: prevent JSON from “hijacking” baseline xgb_params_base.
+# If False (recommended), baseline xgb_params stay as the base, and JSON acts only as per-target/per-family overrides.
+hp_recommended_base_from_json: false                                    # bool; if True, allow JSON (global by_target_index) to replace xgb_params_base.
+
+# ============================ DRFP / TOPICS ===============================
+n_bits: 2048                                                            # int; 1024–4096 typical. DRFP folded length
+radius: 3                                                               # int; 2–4 common. DRFP radius
+n_topics: 6                                                             # int; 3–12 typical for families. LDA topic count (families) when topic_method='lda'
+ring: true                                                              # bool; include ring features in DRFP n-gram tokenization (coherence); accepted alias: 'rings'
+
+# ==================== LDA hyperparameters (scikit-learn) ==================
+lda_learning_method: "batch"                                            # {'batch','online'}; 'batch' is deterministic; 'online' is faster on large N
+lda_n_topics: 6                                                         # int >= 2; number of topics (alias of n_components). Typical: 4–12
+lda_doc_topic_prior: null                                               # None|'auto'|float>0; α. None => sklearn default (1/n_components). 'auto' learns α
+lda_topic_word_prior: null                                              # None|'auto'|float>0; β. None => sklearn default (1/n_features). 'auto' learns β
+lda_max_iter: 50                                                        # int >= 10; EM iterations. Typical: 20–200 (higher = better convergence, slower)
+
+# ====================== SPECIALIST SCALING / ROUTING ======================
+use_family_scaler: true                                                 # bool; per-family scaler reduces shift
+family_min_size: 15                                                     # int; ≥5–30; below → fallback/global model. Minimum samples to train a specialist; else fallback/global
+use_soft_routing: true                                                  # bool; soft blend across specialists via topic probabilities
+
+# ============================== SHAP ======================================
+shap_sample_size: 250                                                   # int; 0 disables; 100–500 typical; cost ↑ with size
+shap_figure_dpi: 600                                                    # int; manuscript-ready SHAP PNG resolution; minimum enforced at 300 dpi
+shap_figure_font_size: 12                                               # int; bold font size used for SHAP figures
+shap_figure_max_display: 20                                             # int; max displayed features in SHAP summary/bar plots
+
+# ======================= DESCRIPTIVE FIGURES ==============================
+# These figures complement SHAP: SHAP explains prediction contributions, while
+# descriptive figures audit the learned reaction-family manifold, family-level
+# descriptor signatures, routing uncertainty, and residual behavior.
+descriptive_figures_enable: false                                       # bool; False => summary CSV only; True => full descriptive PNG/CSV artifacts
+descriptive_figures_dpi: 600                                            # int; PNG resolution; minimum enforced at 300 dpi
+descriptive_figures_font_size: 12                                       # int; bold font size for all new descriptive figures
+descriptive_figures_max_features: 20                                    # int; features used in family descriptor heatmap
+descriptive_figures_boxplot_max_features: 6                             # int; most discriminating features shown as family boxplots
+descriptive_figures_pca_sample_size: null                               # int|None; optional subsample for PCA landscape plotting
+descriptive_figures_heatmap_cmap: YlGnBu                                # default colormap for descriptive heatmaps
+descriptive_figures_descriptor_heatmap_cmap: RdBu_r                     # diverging colormap for robust z-score descriptor heatmap
+descriptive_figures_routing_heatmap_cmap: YlGnBu                        # sequential colormap for reaction-level routing heatmap
+descriptive_figures_routing_family_heatmap_cmap: YlGnBu                 # sequential colormap for family-level routing heatmap
+descriptive_figures_heatmap_annotation_auto_contrast: true              # auto black/white numeric labels based on cell brightness
+figure_label_index_base: 0                                              # {0,1}; figure-only display labels for learned families/topics.
+                                                                        # 0 = internal zero-based labels, e.g. Family 0 / Topic 0
+                                                                        # 1 = manuscript one-based labels, e.g. Family 1 / Topic 1
+                                                                        # This changes only PNG titles/axes/legends, not CSVs, filenames, IDs, or pipeline.pkl.
+
+#If you want lighter colors, these are usually more readable:
+#descriptive_figures_routing_heatmap_cmap: YlGnBu
+#descriptive_figures_routing_family_heatmap_cmap: YlGnBu
+#or slightly softer:
+#descriptive_figures_routing_heatmap_cmap: GnBu
+#descriptive_figures_routing_family_heatmap_cmap: GnBu
+#For the descriptor heatmap, since the values are positive and negative, it is better to keep a diverging colormap:
+#descriptive_figures_descriptor_heatmap_cmap: RdBu_r
+
+# ============================== CACHES ====================================
+descriptor_cache: false                                                 # bool; cache Mordred for speed
+descriptor_cache_dir: "../RS_1_default/cache/descriptors"               # str; cache path"                    # str; cache path
+boruta_cache: false                                                     # bool; cache Boruta confirmed feature list
+boruta_cache_dir: "../RS_1_default/cache/boruta"                        # str; cache path
+
+# ======================= DESCRIPTOR PREFILTERS ============================
+# Safe prefiltering can shrink Boruta runtime without losing information.
+prefilter_enable: false                                                 # bool; master switch for prefilter
+prefilter_nzv: true                                                     # bool; drop near-zero-variance columns
+prefilter_nzv_std_thresh: 1e-12                                         # float; 1e-12–1e-6 typical
+prefilter_corr: false                                                   # bool; drop near-duplicate collinear pairs
+prefilter_corr_threshold: 0.995                                         # float; 0.99–0.999; higher = safer, fewer drops
+prefilter_corr_sample: 5000                                             # int; rows to sample for corr calc (balance speed/accuracy)
+
+# =============================== BORUTA ===================================
+boruta_estimator: "lgbm"                                                # {'lgbm','rf'}; LGBM faster, RF robust fallback
+boruta_max_iter: 100                                                    # int; 50–100 more = slower/more stable
+boruta_perc: 100                                                        # int; 85–100; shadow importance percentile
+boruta_alpha: 0.05                                                      # float; 1e-3–0.1; test size for tentative cutoff
+boruta_two_step: true                                                   # bool; keep strong+tentative then resolve
+boruta_rescue_with_rf: true                                             # bool; if LGBM returns zero features, retry RF
+boruta_rescue_perc: 85                                                  # int; 80–95; percentile rescue if zero after fallback
+boruta_meta_include_names: false                                        # bool; add confirmed feature names to pipeline.pkl (size ↑)
+boruta_per_target: true                                                 # bool; per-target union over target_cols vs single target
+boruta_single_target: "Ea"                                              # str; target from target_cols when boruta_per_target=false
+Experimental_Per_Family_Boruta: false                                   # Enable per-family Boruta (experimental)
+
+# ======================= BORUTA PARALLELIZATION ===========================
+# Optional outer parallelization for independent per-target Boruta runs.
+# This is separate from Mordred parallelization and XGBoost internal threading.
+boruta_parallel_enable: false                                           # bool; enable joblib parallel Boruta across target columns
+boruta_parallel_targets_enable: true                                    # bool; parallelize independent target-wise Boruta runs
+boruta_parallel_n_jobs: -1                                              # int; outer joblib jobs, -1 uses all available CPUs
+boruta_parallel_backend: "loky"                                         # {'loky','multiprocessing','threading'}; loky = process backend
+boruta_parallel_inner_n_jobs: 1                                         # int; estimator n_jobs inside each Boruta worker to avoid oversubscription
+
+# LGBM base estimator for Boruta
+boruta_lgbm_params:
+    n_estimators: 500                                                   # 300–600 typical
+    learning_rate: 0.05                                                 # 0.03–0.10
+    num_leaves: 31                                                      # 31–127 (~depth proxy)
+    max_depth: -1                                                       # -1 means unconstrained; rely on num_leaves
+    min_child_samples: 20                                               # 10–50
+    subsample: 0.8                                                      # 0.6–0.9
+    subsample_freq: 1                                                   # 0–1
+    colsample_bytree: 0.8                                               # 0.6–0.9
+    reg_alpha: 0.0                                                      # 0.0–0.2
+    reg_lambda: 1.0                                                     # 0.0–3.0
+    importance_type: "gain"                                             # {'gain','split'}
+    n_jobs: 1                                                           # -1 or positive int
+    random_state: 42                                                    # int or None (load_config → default int)
+    verbose: -1                                                         # -1, 0, 1
+
+# RF fallback estimator for Boruta
+boruta_rf_params:
+    n_estimators: 100                                                   # 800–1500; ↑ for more stable importances
+    max_depth: null                                                     # None → unconstrained
+    min_samples_split: 2                                                # 2–10
+    min_samples_leaf: 1                                                 # 1–5
+    max_features: "sqrt"                                                # {'sqrt','log2', float in (0,1], int}
+    n_jobs: 1                                                           # -1 or positive int
+    random_state: 42                                                    # int or None
+
+# Boruta heuristics
+boruta_feature_cap_rule: "none"                                         # 'none' | 'sqrtn' | 'log2n'
+boruta_feature_cap_factor: 1.0                                          # multiplier for cap when rule != 'none'
+boruta_family_estimator_small_threshold: 50                             # choose RF below this family size
+boruta_family_keep_frac: 0.6                                            # Familywise Boruta: minimum fraction of CV folds (0–1] a feature must be selected in (within its family) to be kept.
+                                                                        # Threshold = ceil(keep_frac * n_folds). Higher = stricter; e.g., with 5 folds: 0.6→≥3 folds, 0.8→≥4, 1.0→all folds.
+                                                                        # If the result has fewer than boruta_family_min_features, the top-by-frequency features are added to reach that minimum.
+boruta_family_min_features: 60                                          # Familywise Boruta: minimum number of features to keep per family AFTER applying keep_frac.
+                                                                        # If fewer are selected, pad with the most frequently selected (fall back to global_confirmed) until this count is reached.
+                                                                        # Set to 0 to disable padding.
+boruta_family_n_folds: 5                                                # int; typical 3–10. Ensure enough samples per fold within each family; lower folds if families are small.
+# ============================= TOPIC METHOD ===============================
+topic_method: "lda"                                                     # {'lda','fcm','lda+fcm','gmm','lda+gmm','hdbscan','lda+hdbscan','lda+qda'}
+
+# --------- Unified PCA controls (model-agnostic; optional) ----------
+pca_enable: false                                                       # bool; DRFP→PCA before FCM/GMM/HDBSCAN when input='drfp'
+pca_n_components: null                                                  # int or None; None→use 64, 128, 256
+pca_var: 0.95                                                           # 0.80–0.99; variance to preserve
+pca_whiten: false                                                       # False (usual for clustering); True if you want whitening
+pca_random_state: null                                                  # None→random_state; else int
+
+# --------- FCM (Fuzzy C-Means) ----------
+fcm_k: 6                                                                # int or None; if None, use n_topics (3–20 typical)
+fcm_m: 1.1                                                              # float >1; 1.05–1.5; 1.1 near-hard, 1.3+ more fuzzy
+fcm_max_iter: 300                                                       # 100–1000
+fcm_error: 1e-06                                                        # 1e-8–1e-4
+# Supervised: learns a quadratic boundary from base families (here: LDA families)
+fcm_input: "lda"                                                        # {'drfp','lda'}
+
+# --------- GMM (Unsupervised Gaussian Mixture Modeling) --------
+# Supervised: learns a quadratic boundary from base families (here: LDA families)
+gmm_input: "lda"                                                        # {'lda','drfp'}
+gmm_n_components: null                                                  # int or None; None→use n_topics (3–20 typical)
+gmm_covariance_type: "full"                                             # {'full','tied','diag','spherical'}
+gmm_reg_covar: 1e-06                                                    # 1e-8–1e-3; regularization for stability
+gmm_init_params: "kmeans"                                               # {'kmeans','random'}; note: sklearn does NOT support 'kmeans++' here
+gmm_n_init: 1                                                           # int >= 1; # of EM initializations to try. Typical: 1–5 (higher = more robust, slower)
+gmm_tol: 0.001                                                          # float > 0; EM convergence tolerance. Typical: 1e-4 – 1e-2 (lower = tighter, slower)
+gmm_max_iter: 100                                                       # int >= 50; EM max iterations. Typical: 100–300 (higher = more accurate, slower)
+gmm_random_state: null                                                  # None→random_state; else int
+
+# --------- HDBSCAN (Unsupervised Density-Based Clustering With Soft Memberships) -------------
+# Supervised: learns a quadratic boundary from base families (here: LDA families)
+hdbscan_input: "lda"                                                    # {'lda','drfp'}
+hdbscan_min_cluster_size: 10                                            # ≥5–50; larger → fewer, more stable clusters
+hdbscan_min_samples: null                                               # None→auto (≈min_cluster_size); else int ≥1
+hdbscan_metric: "euclidean"                                             # e.g., 'euclidean','manhattan','cosine'
+hdbscan_cluster_selection_epsilon: 0.0                                  # 0.0–1.0+; expands cluster stability regions
+hdbscan_prediction_data: true                                           # bool; required for soft memberships
+hdbscan_core_dist_n_jobs: 1                                             # -1 or positive int
+hdbscan_family_from: "proba"                                            # {'proba','label'}: take argmax(proba) (recommended) or raw labels
+hdbscan_noise_to_family: true                                           # when using labels: map -1 to 0; if all -1, coerce to single family 0
+
+# --------- QDA (Quadratic Discriminant Analysis) ---------
+# Supervised: learns a quadratic boundary from base families (here: LDA families)
+qda_input: "lda"                                                        # {'lda','drfp'}; feature space fed into QDA
+qda_reg_param: 0.05                                                     # float in [0,1]; shrinkage toward diagonal for stability (e.g., 0.05–0.2)
+qda_store_covariance: false                                             # bool; keep class covariance matrices for provenance
+qda_priors: null                                                        # list or None; class priors (length = n_topics). None => empirical
+qda_tol: 0.0001                                                         # 1e-8–1e-2
+qda_feasibility_gate_enable: true                                       # bool; pre-check LDA family counts before fitting QDA
+qda_min_class_count: 5                                                  # int >=2; skip QDA if any present LDA family has fewer samples
+qda_auto_skip_infeasible: true                                          # bool; in Auto-Chooser, skip infeasible QDA candidates instead of erroring
+
+# --------- Cluster Validity Diagnostics ---------
+cluster_validity_enable: false                                          # Silhouette & Davies–Bouldin for (LDA/FCM/GMM/HDBSCAN)
+cluster_validity_sample: null                                           # None or int to sub-sample for speed
+
+# ============================== Reports ===================================
+gmm_report_aic_bic: true                                                # include AIC/BIC for GMM runs
+qda_report_metrics: true                                                # classification metrics for QDA (saved to metrics/)
+hdbscan_stability_enable: true                                          # report cluster persistence (the canonical stability) and per-sample “soft outlier score” if available
+shap_soft_enable: false                                                 # bool; controls only optional soft-probability-weighted SHAP aggregation
+
+# ============================= BOOTSTRAP ==================================
+# Works for LDA/FCM; GMM/HDBSCAN/QDA have mirrored enable switches below.
+bootstrap_B: 25                                                         # 10–100; number of resamples
+bootstrap_sample_frac: 0.8                                              # 0.5–0.9; per-resample fraction
+bootstrap_log_each: false                                               # bool; verbose bootstrap logs
+use_hybrid_routing: false                                               # bool; stable → hard routing, else soft blend
+hybrid_stability_metric: "entropy"                                      # {'entropy','vote_fraction'}
+hybrid_stability_threshold: 0.35                                        # 0.2–0.5 for entropy; 0.7–0.85 for vote_fraction
+
+# Replace families by bootstrap modal (conservative by default)
+bootstrap_replace_family_labels: false                                  # bool; overwrite base families with bootstrap modal
+bootstrap_replace_metric: "entropy"                                     # {'vote_fraction','entropy'}
+bootstrap_replace_threshold: 0.35                                       # 0.7–0.9 (vote_fraction); 0.2–0.5 (entropy)
+bootstrap_replace_keep_unstable: true                                   # bool; if False, replace all by modal regardless
+bootstrap_retrain_on_replaced: false                                    # bool; retrain specialists on replaced families
+
+# Mirrored bootstrap toggles for other topic builders (inherit if None)
+bootstrap_lda_enable: false                                             # bool; enable bootstrap stability & relabeling
+bootstrap_gmm_enable: null                                              # None→use bootstrap_lda_enable; else bool
+bootstrap_hdbscan_enable: null                                          # None→use bootstrap_lda_enable; else bool
+bootstrap_fcm_enable: null                                              # None→use bootstrap_lda_enable; else bool
+bootstrap_qda_enable: null                                              # None→use bootstrap_lda_enable; else bool
+bootstrap_lda_topic_alignment: true                                     # bool; LDA-only: align topics across resamples
+bootstrap_fcm_align_centers: true                                       # bool; when fcm bootstrap is on
+bootstrap_gmm_align_components: true                                    # bool; when gmm bootstrap is on
+bootstrap_gmm_cost: "mean_euclid"                                       # {mean_euclid | mean_mahal | gaussian_kl}
+
+# Bootstrap routing controls: keep stability diagnostics separate from predictive routing.
+bootstrap_use_for_soft_routing: false                                   # bool; if False, soft routing uses baseline topic probabilities even when bootstrap artifacts exist
+bootstrap_use_for_hybrid_routing: true                                  # bool; hybrid routing requires bootstrap probabilities + stability diagnostics
+bootstrap_quality_gate_enable: true                                     # bool; disable hybrid use when bootstrap stability is too weak or hard/soft split is pathological
+bootstrap_min_median_modal_vote: 0.65                                   # float; minimum acceptable median modal vote for bootstrap-guided routing
+bootstrap_max_median_norm_entropy: 0.55                                 # float; maximum acceptable median normalized entropy for bootstrap-guided routing
+bootstrap_min_hard_fraction: 0.05                                       # float; minimum fraction of hard-routed samples under hybrid routing
+bootstrap_max_hard_fraction: 0.95                                       # float; maximum fraction of hard-routed samples under hybrid routing
+bootstrap_sampling_mode: "bootstrap"                                    # {'bootstrap','subsample'}; bootstrap=with replacement, subsample=without replacement
+
+
+# ============================== DIAGNOSTICS ===============================
+# Optional Diagnostic Audit module.
+# These network-preserving diagnostics do NOT perform random reaction-level K-fold
+# validation; they audit family meaning, stability, non-random partition benefit,
+# component contributions, and residual/failure modes.
+# Normal/public preset configs keep diagnostics disabled by default.
+diagnostics_enable: false
+
+# Column in input CSV containing the original RMG/mechanistic family label.
+# If this exact column is absent, common alternatives are searched automatically.
+rmg_family_col: "rmg_family"
+
+# Dataset summary outputs.
+diagnostics_dataset_summary_enable: false
+
+# Learned-family vs RMG/mechanistic-family alignment.
+diagnostics_alignment_enable: false
+
+# Diagnostic audit: random-cluster negative controls.
+# Mode options:
+#   auto                     -> backward-compatible mode: use diagnostics_random_controls_enable;
+#                               if enabled, run size_matched
+#   off                      -> skip random-cluster controls
+#   size_matched             -> randomly permute observed family labels;
+#                               preserves exact family-size distribution
+#   empirical_label_sampling -> sample pseudo-family labels from empirical family probabilities;
+#                               family sizes vary and this is only exploratory
+# For normal/public runs, use: diagnostics_random_controls_mode: "off"
+# For diagnostic-audit/manuscript reproducibility runs, use:
+#   diagnostics_enable: true
+#   diagnostics_random_controls_mode: "size_matched"
+diagnostics_random_controls_mode: "off"
+diagnostics_random_controls_n: 25
+diagnostics_random_controls_enable: false                               # deprecated compatibility key; mode is preferred
+diagnostics_random_controls_preserve_sizes: true                        # deprecated compatibility key; mode is preferred
+
+# Component-wise ablations.
+diagnostics_ablation_enable: false
+diagnostics_ablation_use_all_features: false                            # expensive; enable only for final diagnostic runs
+diagnostics_ablation_include_rmg_label_experts: false
+
+# Residual/failure-mode outputs.
+diagnostics_residual_enable: false
+diagnostics_residual_top_n: 25
+
+# Bootstrap stability summaries.
+diagnostics_stability_summary_enable: false
+
+# Optional separate k-sensitivity grid. This launches separate full pipeline jobs.
+diagnostics_k_sensitivity_enable: false
+diagnostics_k_values: [3, 5, 7, 9, 11]
+diagnostics_k_sensitivity_shap_sample_size: 0
+# ============================ AUTO-CHOOSER ================================
+family_selection_mode: "fixed"                                          # {'fixed','auto'}; auto runs quick sweeps
+auto_eval_metric: "r2_mean"                                             # {'r2_mean','adjr2_mean','nrmse_mean','aard_mean','rae_mean'} (maximize)
+auto_eval_fast_n_estimators: 200                                        # int; quick XGB trees for candidate runs
+auto_eval_boruta_max_iter: 50                                           # int; quick Boruta iters for candidate runs
+candidate_schemes: []                                                   # list[dict]; optional manual candidate set
+auto_eval_max_candidates: null                                          # int or None; cap sweep size
+auto_eval_include_fcm_drfp: true                                        # bool; include FCM-on-DRFP candidates
+auto_eval_include_fcm_pca: true                                         # bool; add PCA-preprocessed FCM-on-DRFP variant
+auto_eval_separate_log: true                                            # bool; write separate auto_chooser.log during family-scheme auto-selection

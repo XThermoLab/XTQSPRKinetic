@@ -1,0 +1,10 @@
+gensim
+hdbscan
+importlib-metadata
+lightgbm
+lz4
+openpyxl
+pyarrow
+scikit-fuzzy
+scipy
+zstandard

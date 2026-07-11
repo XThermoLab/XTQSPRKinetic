@@ -1,0 +1,20 @@
+# 0) Backup current working environment
+python -m pip freeze > requirements_before_mordredcommunity_migration.txt
+
+# 1) Upgrade installer tools
+python -m pip install --upgrade pip setuptools wheel
+
+# 2) Remove original Mordred
+python -m pip uninstall -y mordred
+
+# 3) Move back to NumPy 2.x-compatible runtime for DRFP 0.3.7
+python -m pip install --upgrade "numpy>=2.2.2"
+
+# 4) Install community-maintained Mordred replacement
+python -m pip install --upgrade mordredcommunity
+
+# 5) Reinstall/confirm DRFP against NumPy 2.x
+python -m pip install --upgrade "drfp==0.3.7"
+
+# 6) Check dependency metadata
+python -m pip check
