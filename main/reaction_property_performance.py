@@ -1,6 +1,6 @@
 """
 # =============================================================================
-# reaction_property_performance.V.2.7.0.py
+# reaction_property_performance.py v.2.7.0
 # =============================================================================
 #
 # Purpose
@@ -70,8 +70,9 @@
 #
 # Typical Usage
 # -------------
+# Update the access paths to match your local project structure and data filename before execution.
 # python reaction_property_performance.py \
-#     --input_csv RS_1.csv \
+#     --input_csv your_file_name.csv \
 #     --pipeline_pkl pipeline.pkl \
 #     --output_dir eval_output
 #
@@ -178,7 +179,8 @@ except Exception:
 DEFAULT_TARGET_COLS = ["lnA", "n", "Ea"]
 
 DEFAULT_CONFIG = {
-    "input_csv": "RS_1.csv",                 # must contain reaction_smiles; targets optional for scoring
+    # Update the access paths to match your local project structure and data filename before execution.
+    "input_csv": "your_file_name.csv",       # REPLACE with your exact filename; must contain reaction_smiles; targets optional for scoring
     "pipeline_pkl": "pipeline.pkl",
     "output_dir": "eval_output",
     # Optional target override for old pickles without target_cols metadata.
