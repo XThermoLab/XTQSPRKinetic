@@ -13,8 +13,9 @@ pipeline_compress: "auto"                                               # {'none
 pipeline_dump_sidecar_meta: true                                        # bool; write pipeline.pkl.meta.json (provenance)
 
 # ------------------ IO & Reproducibility ---------------------------------
-input_csv: "../data/RS_1.csv"                                           # str; must contain reaction_smiles plus target_cols
-output_dir: "../output/RS_1_balanced"                                   # str; directory for all artifacts
+# Update these paths to match your local project structure and data filename
+input_csv: "../data/your_file_name.csv"                                 # str; REPLACE with your exact filename; must contain reaction_smiles and target_cols
+output_dir: "../output/your_output_folder"                              # str; define target directory for artifacts
 random_state: 42                                                        # int; 0–2**31-1; fix for reproducible DRFP/LDA/FCM/XGB
 
 # ============================== TARGETS ===================================
@@ -244,10 +245,11 @@ figure_label_index_base: 0                                              # {0,1};
 #descriptive_figures_descriptor_heatmap_cmap: RdBu_r
 
 # ============================== CACHES ====================================
+# Update these paths to match your local project structure
 descriptor_cache: true                                                  # bool; cache Mordred for speed
-descriptor_cache_dir: "../RS_1_balanced/cache/descriptors"              # str; cache path
+descriptor_cache_dir: "../your_output_folder/cache/descriptors"         # str; cache path
 boruta_cache: true                                                      # bool; cache Boruta confirmed feature list
-boruta_cache_dir: "../RS_1_balanced/cache/boruta"                       # str; cache path
+boruta_cache_dir: "../your_output_folder/cache/boruta"                  # str; cache path
 
 # ======================= DESCRIPTOR PREFILTERS ============================
 # Safe prefiltering can shrink Boruta runtime without losing information.
