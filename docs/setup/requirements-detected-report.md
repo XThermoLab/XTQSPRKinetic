@@ -1,6 +1,6 @@
 # XTQSPRKinetic requirements detection report
 
-Files scanned: 23
+Files scanned: 22
 Core distributions: 12
 Optional distributions: 10
 
@@ -8,29 +8,29 @@ Optional distributions: 10
 
 - Boruta `0.4.3`
 - drfp `0.3.7`
-- joblib `1.5.2`
-- matplotlib `3.10.5`
-- mordred `1.2.0`
-- numpy `1.26.4`
-- pandas `2.3.2`
-- PyYAML `6.0.2`
-- rdkit `2025.3.5`
-- scikit-learn `1.7.1`
-- shap `0.48.0`
-- xgboost `3.0.4`
+- joblib `1.5.3`
+- matplotlib `3.10.9`
+- mordred `version unavailable`
+- numpy `2.4.6`
+- pandas `3.0.3`
+- PyYAML `6.0.3`
+- rdkit `2026.3.2`
+- scikit-learn `1.9.0`
+- shap `0.52.0`
+- xgboost `3.2.0`
 
 ## Optional / feature-specific
 
 - gensim `4.4.0`
-- hdbscan `0.8.40`
-- importlib-metadata `8.7.0`
+- hdbscan `0.8.44`
+- importlib-metadata `9.0.0`
 - lightgbm `4.6.0`
-- lz4 `4.4.4`
+- lz4 `4.4.5`
 - openpyxl `3.1.5`
-- pyarrow `21.0.0`
+- pyarrow `24.0.0`
 - scikit-fuzzy `0.5.0`
-- scipy `1.16.1`
-- zstandard `version unavailable`
+- scipy `1.17.1`
+- zstandard `0.25.0`
 
 ## Unresolved import modules
 
