@@ -1,6 +1,6 @@
 # XTQSPRKinetic Python 3.13 clean installation with mordredcommunity
 
-This is the recommended Python 3.13 profile for XTQSPRKinetic v2.7.0 when
+This is the recommended Python 3.13 profile for XTQSPRKinetic when
 using Mordred descriptors. It uses the community-maintained Mordred package
 while preserving the same Python import path used by the code:
 

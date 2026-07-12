@@ -1,4 +1,4 @@
-# XTQSPRKinetic Run Guide (v2.7.0)
+# XTQSPRKinetic Run Guide
 
 **Maintainer:** Hamidreza Najafi (XThermo Lab)  
 **Last updated:** 2026-06-08
@@ -35,7 +35,7 @@ XTQSPRKinetic/
       requirements-detected-report.md
   main/
     main.py
-    reaction_property_performance.py  # generalized v2.7 evaluator
+    reaction_property_performance.py  # generalized evaluator
   src/
     mordred_xtqspr_patch.py  # optional explicit-H Mordred runtime patch
   output/
@@ -261,7 +261,7 @@ python main/main.py --config configs/my_runs/lda_soft.yaml
 python main/main.py --config /absolute/path/to/run_config.yaml
 ```
 
-### 3.5 Normal/public configs and the v2.7.0 Diagnostic Audit module
+### 3.5 Normal/public configs and the Diagnostic Audit module
 Preset configs are intended for normal/public runs and therefore keep the optional diagnostic audit disabled by default:
 
 ```yaml
@@ -288,7 +288,7 @@ The driver applies project-aware path normalization, including:
 This behavior makes config files more portable across machines when using the standard repository layout.
 
 ### 3.7 Normal/public configs versus diagnostics
-The v2.7.0 code includes an optional diagnostic audit layer. The preset configs supplied here are normal/public run profiles, so they explicitly keep this layer disabled:
+The code includes an optional diagnostic audit layer. The preset configs supplied here are normal/public run profiles, so they explicitly keep this layer disabled:
 
 ```yaml
 diagnostics_enable: false
@@ -307,9 +307,9 @@ The `size_matched` random-control mode preserves the exact learned-family size d
 
 
 
-### 3.8 Target-column behavior in v2.7.0
+### 3.8 Target-column behavior
 
-XTQSPRKinetic v2.7.0 uses `target_cols` as the canonical list of supervised continuous reaction-property targets:
+XTQSPRKinetic uses `target_cols` as the canonical list of supervised continuous reaction-property targets:
 
 ```yaml
 target_cols: ["lnA", "n", "Ea"]
@@ -326,7 +326,7 @@ The minimum training input is therefore `reaction_smiles` plus every column name
 
 ### 3.9 Optional explicit-Hydrogen-aware Mordred descriptor mode
 
-For radical-rich C/H kinetic networks, v2.7.0 can apply a controlled XTQSPRKinetic runtime patch to Mordred/MordredCommunity descriptor calculation. This avoids manually editing installed public package files while preserving the patched descriptor behavior in a reproducible, config-controlled way.
+For radical-rich C/H kinetic networks, XTQSPRKinetic can apply a controlled runtime patch to Mordred/MordredCommunity descriptor calculation. This avoids manually editing installed public package files while preserving the patched descriptor behavior in a reproducible, config-controlled way.
 
 Enable the mode only when needed:
 
@@ -357,7 +357,7 @@ When this mode is enabled, describe the resulting descriptors as **XTQSPRKinetic
 
 ### 3.10 Bootstrap/hybrid-routing and QDA feasibility safeguards
 
-The final split v2.7.0 pipeline separates Bootstrap diagnostics from predictive routing. Bootstrap stability artifacts can be generated without automatically changing soft-routing predictions. The recommended conservative controls are:
+The modular pipeline separates Bootstrap diagnostics from predictive routing. Bootstrap stability artifacts can be generated without automatically changing soft-routing predictions. The recommended conservative controls are:
 
 ```yaml
 bootstrap_use_for_soft_routing: false
@@ -393,7 +393,7 @@ In Auto-Chooser mode, infeasible QDA candidates are skipped cleanly. In fixed/ma
 
 ## 4. Running the companion evaluator: `main/reaction_property_performance.py`
 
-`reaction_property_performance.py` is the generalized v2.7 companion program for evaluating a saved XTQSPRKinetic `pipeline.pkl` on a reaction-network CSV and exporting predictions + performance summaries. It replaces the older Arrhenius-specific `kinetics_performance.py` naming. If a compatibility script named `kinetics_performance_v2.7.0.py` is kept in the repository, it should point to the same generalized logic.
+`reaction_property_performance.py` is the generalized companion program for evaluating a saved XTQSPRKinetic `pipeline.pkl` on a reaction-network CSV and exporting predictions + performance summaries. It replaces the older Arrhenius-specific `kinetics_performance.py` naming. If a compatibility script using the earlier kinetics-performance naming is kept in the repository, it should point to the same generalized logic.
 
 ### 4.1 What it evaluates
 The evaluator uses the saved `pipeline.pkl` as the source of truth for:
