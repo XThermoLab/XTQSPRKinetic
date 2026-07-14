@@ -5,6 +5,7 @@
 
 **XTQSPRKinetic** is a configurable, modular **mixture-of-experts (MoE)** framework for reaction-space clustering/organization and reaction-property learning from **reaction SMILES** for heterogeneous reaction datasets. The default demonstrated kinetic case study predicts the modified Arrhenius parameters (**ln A**, **n**, and **Ea**), while the generalized target layer uses `target_cols`, allowing user-defined continuous reaction-level target properties present in the input CSV.
 
+
 The framework integrates:
 - reaction featurization (**DRFP** + aggregated **Mordred/MordredCommunity** descriptors),
 - reaction-family discovery (topic-modeling / clustering and hybrid strategies),
