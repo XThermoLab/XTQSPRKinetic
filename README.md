@@ -1,9 +1,9 @@
 # XTQSPRKinetic
 
 **Maintainer:** Hamidreza Najafi (XThermo Lab)  
-**Last updated:** 2026-06-08
+**Last updated:** 2026-11-04
 
-**XTQSPRKinetic** is a configurable, modular **mixture-of-experts (MoE)** framework for reaction-space clustering/organization and reaction-property learning from **reaction SMILES** for heterogeneous reaction datasets. The default demonstrated kinetic case study predicts the modified Arrhenius parameters (**ln A**, **n**, and **Ea**), while the generalized target layer uses `target_cols`, allowing user-defined continuous reaction-level target properties present in the input CSV.
+**XTQSPRKinetic** is a configurable, modular **mixture-of-experts (MoE)** framework for reaction-space clustering/organization and reaction-property learning from **reaction SMILES** for heterogeneous reaction datasets. The demonstrated kinetic case study models the modified Arrhenius parameters (**ln A**, **n**, and **Ea**), while the generalized target layer uses `target_cols`, allowing user-defined continuous reaction-level target properties present in the input CSV.
 
 
 The framework integrates:
@@ -23,10 +23,10 @@ This GitHub repository distributes the **modular generalized multi-target reacti
 ## Algorithm overview
 
 <p align="center">
-  <img src="docs/images/fig1_algorithm.png" alt="XTQSPRKinetic algorithm overview" width="900">
+  <img src="docs/images/XTQSPRKinetic-GitHub-Workflow.svg" alt="XTQSPRKinetic software workflow" width="900">
 </p>
 
-<p align="center"><em>Figure 1. High-level XTQSPRKinetic workflow/algorithm overview.</em></p>
+<p align="center"><em>XTQSPRKinetic software workflow. The main pathways illustrate the selected paper configuration; the sidebar summarizes additional configuration-dependent capabilities.</em></p>
 
 ---
 
@@ -34,7 +34,7 @@ This GitHub repository distributes the **modular generalized multi-target reacti
 
 Large chemical kinetic datasets are often mechanistically heterogeneous. XTQSPRKinetic addresses this by learning a **family-aware decomposition** (gating + specialists), allowing different reaction regimes to be modeled by different expert regressors while preserving interpretability through family-level outputs and explainability artifacts.
 
-In the associated manuscript, the framework is benchmarked on a simulated **high-temperature, isobaric n-hexane (C6H14) pyrolysis** reaction network containing **1215 elementary reactions** spanning multiple reaction regimes.
+The associated article evaluates the framework on an RMG-derived **n-hexane pyrolysis/steam-cracking network** containing **1215 elementary reactions**. The reported benchmark metrics characterize fitted-network reconstruction; predictive performance on unseen reactions was not evaluated.
 
 ---
 
@@ -567,24 +567,27 @@ When `descriptive_figures_enable: true`, the descriptive-figure module can write
 - `eval_summary.txt`
 - `property_eval.log`
 
-### Reproducibility recommendation
-Store the **run-specific configuration file** inside the corresponding run/output folder (or dataset package). This makes each run self-describing and aligns well with later deposition of benchmark artifacts (e.g., Zenodo).
-
 ---
 
-## Associated data (benchmark outputs / Zenodo)
+## Associated data and reproducibility archive
 
-This GitHub repository is intended for the **XTQSPRKinetic source code**. Benchmark outputs used in the associated manuscript can be deposited separately (e.g., Zenodo) as run-specific benchmark artifacts, with the corresponding per-run configuration files stored alongside those outputs.
+The study-specific **XTQSPRKinetic v2.7.0** software snapshot, benchmark data, computational outputs, configurations, and supporting documentation accompanying the article are archived in Zenodo:
+
+https://doi.org/10.5281/zenodo.18786235
+
+Use this versioned archive to reproduce the analyses reported in the article and its Supporting Information. The GitHub repository contains the development implementation and may include changes introduced after the archived study version.
 
 ---
 
 ## Citation
 
-If you use XTQSPRKinetic in your work, please cite:
-- the associated manuscript (add full citation upon publication), and
-- the benchmark dataset record (e.g., Zenodo), when applicable.
+If you use XTQSPRKinetic in your work, please cite the associated article:
 
-You may also include a `CITATION.cff` file in this repository for GitHub-native citation support.
+Najafi, H.; Khatami, N.; Sobati, M. A. XTQSPRKinetic: A Mixture-of-Experts Framework for Reaction-Space Clustering and Property Learning from SMILES. *Journal of Chemical Information and Modeling*. 2026, [Volume] ([Issue]), [First page]–[Last page]. https://doi.org/10.1021/acs.jcim.6c02298
+
+If you use the archived benchmark data, computational outputs, or study-specific software snapshot, please also cite the Zenodo record using the citation provided in its metadata:
+
+Najafi, H.; Khatami, N.; Sobati, M. A. XTQSPRKinetic Benchmark Data, Computational Outputs, and Reproducibility Package; *Zenodo*, 2026. https://doi.org/10.5281/zenodo.18786235
 
 ---
 
