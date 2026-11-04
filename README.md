@@ -23,7 +23,7 @@ This GitHub repository distributes the **modular generalized multi-target reacti
 ## Algorithm overview
 
 <p align="center">
-  <img src="docs/images/XTQSPRKinetic-GitHub-Workflow.svg" alt="XTQSPRKinetic software workflow" width="900">
+  <img src="docs/images/XTQSPRKinetic-GitHub-Workflow.png" alt="XTQSPRKinetic software workflow" width="900">
 </p>
 
 <p align="center"><em>XTQSPRKinetic software workflow. The main pathways illustrate the selected paper configuration; the sidebar summarizes additional configuration-dependent capabilities.</em></p>
