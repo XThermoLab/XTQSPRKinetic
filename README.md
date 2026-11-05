@@ -583,7 +583,7 @@ Use this versioned archive to reproduce the analyses reported in the article and
 
 If you use XTQSPRKinetic in your work, please cite the associated article:
 
-Najafi, H.; Khatami, N.; Sobati, M. A. XTQSPRKinetic: A Mixture-of-Experts Framework for Reaction-Space Clustering and Property Learning from SMILES. *Journal of Chemical Information and Modeling*. 2026, [Volume] ([Issue]), [First page]–[Last page]. https://doi.org/10.1021/acs.jcim.6c02298
+Najafi, H.; Khatami, N.; Sobati, M. A. XTQSPRKinetic: A Mixture-of-Experts Framework for Reaction-Space Clustering and Property Learning from SMILES. *Journal of Chemical Information and Modeling*, 2026. https://doi.org/10.1021/acs.jcim.6c02298
 
 If you use the archived benchmark data, computational outputs, or study-specific software snapshot, please also cite the Zenodo record using the citation provided in its metadata:
 
